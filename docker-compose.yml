@@ -13,6 +13,50 @@ services:
     networks:
       - confluent
 
+  pinot-controller:
+    image: apachepinot/pinot:1.0.0
+    command: "StartController -zkAddress zookeeper:2181"
+    container_name: pinot-controller
+    restart: unless-stopped
+    ports:
+      - "9000:9000"
+    environment:
+      JAVA_OPTS: "-Dplugins.dir=/opt/pinot/plugins -Xms1G -Xmx4G -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -Xloggc:gc-pinot-controller.log"
+    depends_on:
+      - zookeeper
+    volumes:
+      - ./table/:/tmp/pinot/
+    networks:
+      - confluent
+
+  pinot-broker:
+    image: apachepinot/pinot:1.0.0
+    command: "StartBroker -zkAddress zookeeper:2181"
+    restart: unless-stopped
+    container_name: "pinot-broker"
+    ports:
+      - "8099:8099"
+    environment:
+      JAVA_OPTS: "-Dplugins.dir=/opt/pinot/plugins -Xms4G -Xmx4G -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -Xloggc:gc-pinot-broker.log"
+    depends_on:
+      - pinot-controller
+    networks:
+      - confluent
+
+  pinot-server:
+    image: apachepinot/pinot:1.0.0
+    command: "StartServer -zkAddress zookeeper:2181"
+    restart: unless-stopped
+    container_name: "pinot-server"
+    ports:
+      - "8098:8098"
+    environment:
+      JAVA_OPTS: "-Dplugins.dir=/opt/pinot/plugins -Xms4G -Xmx16G -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -Xloggc:gc-pinot-server.log"
+    depends_on:
+      - pinot-broker
+    networks:
+      - confluent
+
   broker:
     image: confluentinc/cp-server:7.4.0
     hostname: broker
@@ -195,36 +239,6 @@ services:
     networks:
       - confluent
     command: postgres -c config_file=/etc/postgresql/postgresql.conf
-
-  elasticserach:
-    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.19-arm64 #mac image
-    hostname: elasticsearch
-    ports:
-      - "9200:9200"
-      - "9300:9300"
-    environment:
-      - cluster.name=es-docker-cluster
-      - discovery.type=single-node
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
-      - bootstrap.memory_lock=true
-      - xpack.security.enabled=false #turn off SLS/TLS; for POC is fine, not for PROD
-    ulimits:
-      memlock:
-        soft: -1
-        hard: -1
-      nofile:
-        soft: 65536
-        hard: 65536
-    networks:
-      - confluent
-
-  kibana:
-    image: docker.elastic.co/kibana/kibana:7.17.19-arm64
-    hostname: kibana
-    ports:
-      - 5601:5601
-    networks:
-      - confluent
 
   prometheus:
     image: prom/prometheus
