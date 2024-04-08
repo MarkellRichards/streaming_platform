@@ -131,6 +131,8 @@ services:
       CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: 1
       CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: 1
       CONNECT_PLUGIN_PATH: /usr/share/java,/usr/share/confluent-hub-components
+      KAFKA_OPTS: "-javaagent:/opt/prometheus-jmx-exporter/jmx_prometheus_javaagent-0.20.0.jar=5083:/opt/prometheus-jmx-exporter/kafka-connect.yml"
+
     networks:
       - confluent
     command:
@@ -143,6 +145,9 @@ services:
         /etc/confluent/docker/run &
         #
         sleep infinity
+
+    volumes:
+      - ./prometheus:/opt/prometheus-jmx-exporter
 
   control_center:
     image: confluentinc/cp-enterprise-control-center:7.4.0

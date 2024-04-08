@@ -19,3 +19,16 @@ scrape_configs:
   static_configs:
   - targets:
     - localhost:9090
+
+- job_name: "kafka-connect"
+  static_configs:
+    - targets:
+        - "connect:5083"
+      labels:
+        env: "dev"
+        kafka_connect_cluster_id: "connect"
+  relabel_configs:
+    - source_labels: [__address__]
+      target_label: hostname
+      regex: '([^:]+)(:[0-9]+)?'
+      replacement: '${1}'
